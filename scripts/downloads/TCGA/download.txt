@@ -1,0 +1,11 @@
+The manifest file "gdc_manifest.txt" was downloaded from the GDC portal with the following filters set:
+
+cases.samples.sample_type       blood derived normal,primary tumor,solid tissue normal
+files.data_format       bam
+files.experimental_strategy     RNA-Seq, WXS
+cases.project.program.name	TCGA
+
+# Download metadata:
+bash gdc_metadata_large.sh gdc_manifest.txt > metadata.tsv
+
+For RNA-Seq only files using the "STAR 2-Pass" workflow were analyzed.

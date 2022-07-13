@@ -1,0 +1,389 @@
+# Environment
+  
+Analyses were performed in a Conda environment. See **mhc2_genoytping.yml** for details. **scripts/Rpacks** describes R packages that were installed independently.
+All scripts assume that this Conda environment is activated in advance.
+The working directory of the scripts is assumed to be the main project directory.
+
+# Install HLA genotyping tools
+
+Prerequisite: install Miniconda3 to temp/conda/conda_base 
+
+```{bash}
+# Create separate Conda environments and Docker containers for the HLA genotyping tools
+bash scripts/tools/scripts/create_tool_containers.sh
+
+# Download and install the tools
+# See comments of this script for download instructions of tools where the license did not permit to provide a direct link.
+bash scripts/downloads/tools.sh
+```
+
+# Data
+## Download sequencing data
+```{bash}
+# 1000 genomes WES data
+bash scripts/downloads/1kg/wes/download.sh
+# 1000 genomes RNA data (Geuvadis)
+bash scripts/downloads/1kg/rna/download.sh
+# NCI-60 WES data
+bash scripts/downloads/abaan_2013/download.sh
+# NCI-60 RNA data
+bash scripts/downloads/reinhold_2019/download.sh
+```
+
+## Download gold standard
+
+### 1000 genomes
+```{bash}
+# Gourraud, 2014
+bash scripts/downloads/1kg/gold standard/download_gourraud.sh
+
+# See instructions in scripts/downloads/1kg/gold standard/download.txt
+# for De Bakker gold standard data
+
+# Generate gold standard data RDS files
+Rscript scripts/combine_1kg_gold_standard.R
+Rscript scripts/process_goldstandard_1kg.R
+```
+
+### NCI-60
+```{bash}
+# Adams 2005
+bash scripts/downloads/adams_2005/download.sh
+
+# Generate gold standard data RDS files
+Rscript scripts/downloads/adams_2005/download_parse_tables.R
+Rscript scripts/process_goldstandard_nci60.R
+```
+
+# Run tools
+
+See scripts in scripts/run folder to apply genotyping tools to 1000 genomes, TCGA and NCI-60 dataset.
+
+# Analysis pipeline
+
+```{bash}
+# Process resource consumption data
+Rscript scripts/process_resource_consumption.R
+Rscript scripts/plot_resource_consumption.R
+
+# Process predictions and evaluate tools
+Rscript scripts/process_predictions.R
+Rscript scripts/evaluate_predictions_tools.R
+
+# Train metaclassifier and plot figure 4
+Rscript scripts/create_meta_initial_tools.R
+Rscript scripts/create_meta_tie_solver.R
+Rscript scripts/optimize_metaclassifier.R
+Rscript scripts/plot_metaclassifier.R
+
+# Apply metaclassifier to predictions
+Rscript scripts/make_meta_predictions.R
+Rscript scripts/evaluate_predictions_meta.R
+
+# Plot figure S11:
+Rscript scripts/plot_meta_alltools_accuracy.R
+
+# Plot performance on 1000 genomes data (figure 2)
+Rscript scripts/plot_performance.R
+
+# Plot observed vs expected allele frequency on TCGA data (figure 3):
+Rscript scripts/plot_freq_correlation_tcga.R
+
+# Plot supplementary figure of concordance analysis
+Rscript plot_clusters_predictions_tools.R
+Rscript plot_tool_concordance.R
+```
+
+# Analyse results
+
+```{r}
+# Load dependencies
+library(tidyverse)
+source("scripts/functions/extract_dataset.R")
+```
+## Resource consumption
+
+```{r}
+metrics <- readRDS("data/resource_consumption.rds") %>%
+  mutate(tool = recode(tool, "HLA-LA" = "HLA*LA", "HLAScan" = "HLAscan"))
+```
+
+```{r}
+# Slowest tools for DNA
+med_time_dna <- metrics %>%
+group_by(data_type, tool) %>%
+summarise(M=median(duration, na.rm=T)) %>%
+arrange(desc(M)) %>%
+filter(data_type == "DNA-Seq")
+
+med_time_dna
+```
+
+```{r}
+# Fastest for DNA (in seconds)
+metrics %>%
+group_by(data_type, tool) %>%
+summarise(M=3600*median(duration, na.rm=T)) %>%
+arrange((M)) %>%
+filter(data_type == "DNA-Seq")
+```
+
+```{r}
+# Memory for DNA
+metrics %>%
+group_by(data_type, tool) %>%
+summarise(M=median(mem_gib_max, na.rm=T)) %>%
+arrange(desc(M)) %>%
+filter(data_type == "DNA-Seq")
+```
+
+```{r}
+# Slowest for RNA
+med_time_rna <- metrics %>%
+group_by(data_type, tool) %>%
+summarise(M=median(duration, na.rm=T)) %>%
+arrange(desc(M)) %>%
+filter(data_type == "RNA-Seq")
+med_time_rna
+```
+
+```{r}
+# Fastest tool for RNA (in seconds)
+metrics %>%
+group_by(data_type, tool) %>%
+summarise(M=3600*median(duration, na.rm=T)) %>%
+arrange((M)) %>%
+filter(data_type == "RNA-Seq")
+```
+
+```{r}
+# Memory for RNA
+metrics %>%
+group_by(data_type, tool) %>%
+summarise(M=median(mem_gib_max, na.rm=T)) %>%
+arrange(desc(M)) %>%
+filter(data_type == "RNA-Seq")
+```
+
+```{r}
+# Running time for DNA vs RNA
+inner_join(med_time_dna, med_time_rna, by="tool") %>%
+mutate(ratio = M.y / M.x) %>%
+arrange(desc(ratio))
+```
+
+## Performance of tools on DNA (section 2.2)
+```{r}
+# 1000 genomes
+perf1kg <- extract_dataset("1kg", readRDS("data/performance_tools.rds")) %>%
+  mutate(mhc_class = if_else(gene %in% c("A", "B", "C"), "I", "II")) %>%
+  mutate(S = (1 - undecided_ratio) * accuracy)
+```
+
+```{r}
+# Start with DNA
+## per data type and class
+perf_dc <- perf1kg %>%
+  filter(data_type == "DNA-Seq") %>%
+  group_by(data_type, mhc_class, tool) %>%
+  summarise(S = mean(S, na.rm=T)) %>%
+  arrange(-S)
+```
+
+```{r}
+# Best per class
+perf_dc %>%
+  filter(mhc_class == "I")
+```
+
+```{r}
+perf_dc %>%
+  filter(mhc_class == "II")
+```
+
+```{r}
+# Only tools to reach >= 90% on all MHC-II genes
+# Worst gene for each tool (MHC-II):
+perf1kg %>%
+  filter(data_type == "DNA-Seq", mhc_class == "II") %>%
+  group_by(data_type, mhc_class, tool) %>%
+  slice_min(S) %>%
+  arrange(S)
+```
+
+```{r}
+# Best performance per tool for MHC-II
+perf1kg %>%
+  filter(data_type == "DNA-Seq", mhc_class == "II") %>%
+  group_by(data_type, mhc_class, tool) %>%
+  slice_max(S) %>%
+  arrange(S)
+# (Note that DQA1 is not supported by xHLA)
+```
+
+```{r}
+
+# Performance for DQB1
+perf1kg %>%
+  filter(data_type == "DNA-Seq", gene == "DQB1") %>%
+  arrange(-S)
+
+# Kourami for DQB1
+perf1kg %>%
+  filter(data_type == "DNA-Seq", gene == "DQB1", tool == "kourami")
+```
+
+```{r}
+# Worst tools
+perf1kg %>%
+  filter(data_type == "DNA-Seq") %>%
+  group_by(data_type, mhc_class, tool) %>%
+  arrange(S)
+```
+
+```{r}
+# HLAScan
+perf1kg %>%
+  filter(data_type == "DNA-Seq", tool == "HLAscan") %>%
+  group_by(data_type, mhc_class, tool) %>%
+  arrange(S)
+# HLAScan: others than DQA1s
+perf1kg %>%
+  filter(data_type == "DNA-Seq", tool == "HLAscan") %>%
+  filter(gene != "DQA1") %>%
+  summarise(sd(undecided_ratio), mean(undecided_ratio))
+
+perf1kg %>%
+  filter(data_type == "DNA-Seq", tool == "kourami")
+
+# HLA-VBseq
+perf1kg %>%
+  filter(data_type == "DNA-Seq", tool == "HLAVBseq") %>%
+  group_by(data_type, mhc_class, tool) %>%
+  arrange(S)
+
+# HLAminer
+perf1kg %>%
+  filter(data_type == "DNA-Seq", tool == "HLAminerHPRA") %>%
+  group_by(data_type, mhc_class, tool) %>%
+  arrange(S)
+```
+
+## Performance on RNA (section 2.3)
+```{r}
+# RNA
+## per data type and class
+perf_dc <- perf1kg %>%
+  filter(data_type == "RNA-Seq") %>%
+  group_by(data_type, mhc_class, tool) %>%
+  summarise(S = mean(S, na.rm=T)) %>%
+  arrange(-S)
+```
+
+```{r}
+perf_dc %>%
+  filter(mhc_class == "I")
+```
+
+```{r}
+perf_dc %>%
+  filter(mhc_class == "II")
+```
+
+```{r}
+# NCI-60
+perfnci <- extract_dataset("NCI-60", readRDS("data/performance_tools.rds")) %>%
+  mutate(mhc_class = if_else(gene %in% c("A", "B", "C"), "I", "II")) %>%
+  mutate(S = (1 - undecided_ratio) * accuracy)
+
+```
+
+```{r}
+perfnci_dc <- perfnci %>%
+  filter(data_type == "DNA-Seq") %>%
+  group_by(data_type, mhc_class, tool) %>%
+  summarise(S = mean(S, na.rm=T)) %>%
+  arrange(-S)
+
+perfnci_dc
+
+```
+
+```{r}
+perfnci %>%
+  filter(tool == "PHLAT", gene == "DRB1")
+```
+
+```{r}
+# NCI-60
+perfnci %>%
+  filter(data_type == "RNA-Seq", mhc_class == "I") %>%
+  group_by(data_type, mhc_class, tool) %>%
+  summarise(S = mean(S, na.rm=T)) %>%
+  arrange(-S)
+```
+
+## TCGA frequency correlation analysis (section 2.4)
+
+```{r}
+tcga <- readRDS("data/freq_based_metrics.rds")
+tcga_freq <- readRDS("data/predicted_freqs_tcga_ggroup.rds")
+
+# Correlation higher than 0.95 in both populations, all genes
+tcga %>%
+  group_by(tool, data_type) %>%
+  drop_na %>%
+  filter(all(correlation.pearson >= 0.95)) %>%
+  distinct(data_type, tool) %>%
+  arrange(data_type, tool)
+
+# Gene with worst correlation per RNA tool per data set
+tcga %>%
+  group_by(tool, data_type) %>%
+  drop_na %>%
+  filter(data_type == "RNA-Seq") %>%
+  # distinct(data_type, tool) %>%
+  group_by(data_type, tool, race) %>%
+  slice_min(correlation.pearson) %>%
+  arrange(data_type, tool, correlation.pearson)
+
+tcga
+
+tcga %>%
+  filter(tool == "PHLAT")
+
+tcga %>%
+  filter(tool == "PHLAT", gene == "A")
+
+tcga_freq %>% filter(tool == "PHLAT", gene == "A", allele == "01:01")
+tcga_freq %>% filter(tool == "PHLAT", gene == "A", allele == "02:01")
+
+
+tcga_freq %>% filter(tool == "arcasHLA", gene == "DRB1", allele == "14:02")
+
+```
+
+## Tool concordance (section 2.5)
+
+The amount of samples wrongly typed by all tools simultaneously is calculated in scripts/plot_clusters_predictions_tools.R
+
+## Metaclassifier (section 2.6)
+
+```{r}
+# Metaclassifier
+res <- readRDS("data/meta_optimized.rds")
+
+# Best performing tool for HLA-DQB1
+# See plot_meta_alltools_accuracy.R
+
+# Accuracy for 4 tool model
+## MHC class I
+res$class %>%
+  filter(data_type == "DNA-Seq", mhc_class == "I", map_int(tools, length) == 4) %>%
+  summarise(mean(accuracy))
+
+## MHC class II
+res$class %>%
+  filter(data_type == "DNA-Seq", mhc_class == "II", map_int(tools, length) == 4) %>%
+  summarise(mean(accuracy))
+```

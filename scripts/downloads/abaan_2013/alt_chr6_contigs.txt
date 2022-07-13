@@ -1,0 +1,7 @@
+chr6_GL000250v2_alt
+chr6_GL000251v2_alt
+chr6_GL000252v2_alt
+chr6_GL000253v2_alt
+chr6_GL000254v2_alt
+chr6_GL000255v2_alt
+chr6_GL000256v2_alt

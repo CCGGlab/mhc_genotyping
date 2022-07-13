@@ -1,0 +1,14 @@
+Download from
+https://www.internationalgenome.org/category/hla/
+
+ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/working/20140725_hla_genotypes/20140702_hla_diversity.txt
+-> HLA diversity in the 1000 Genome Dataset, Gourraud et al.
+-> uses Sanger sequencing after PCR amplification
+
+ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/HLA_types/20181129_HLA_types_full_1000_Genomes_Project_panel.txt
+-> Laurent Abi-Rached, Julien Paganini et al., 2018
+-> Based on NGS data
+
+Population data (igsr_populations.tsv) can be downloaded from https://www.internationalgenome.org/data-portal/population and clicking on "Download the list".
+Alternatively this data can be downloaded directly using "download_populations.sh"
+Remark: at the time of writing there was a problem with the system installation of curl, the version from the mhc_driver conda environment was used instead

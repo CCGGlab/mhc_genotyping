@@ -1,0 +1,44 @@
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  # R
+  - r-base=4.0.5
+  - r-essentials=4.0
+
+  # Development
+  - r-furrr=0.2.3 # parallel processing
+  - r-log4r=0.3.2 # logging functionality
+  - r-tictoc=1.0.1 # tic / toc functions
+  - r-devtools=2.4.2 # install packages from Github
+
+  # Input / output
+  - r-svglite=2.0.0
+  - r-vroom=1.5.5 # read files in parallel
+  - r-rjson=0.2.20 # used by design project students in conversion scripts
+
+  # Machine learning
+  - r-metrics=0.1.4
+
+  # Algorithms
+  - r-fuzzyjoin=0.1.6 # Fuzzy string matching
+
+  # Graphics
+  - r-ggpubr=0.4.0 # publication ready plots
+  - r-latex2exp=0.5.0 # math symbols in ggplot
+  - r-ggtext=0.1.1 # coloured axis labels
+  - r-gt=0.3.1 # table formatting
+  - r-ggdendro=0.1_20 # ggplot compatible dendrograms
+  - r-webshot=0.5.2 # HTML to PDF (used for overview table)
+
+  # Bioinformatics
+  - sra-tools=2.11.0 # download and extract from SRA
+  - pysradb=1.0.1 # get metadata from SRA
+  - sambamba=0.8.1 # working with SAM files
+  - bwa=0.7.17 # BWA alignment tool (DNA)
+  - bedtools=2.30.0
+  - star=2.6.0c # STAR alignment tool (RNA)
+  - k8=0.2.5 # Javascript interpreter needed for bwa-postalt
+  - biobambam=2.0.182 # BAM file processing (bammarkduplicates)
+  - fastqc=0.11.9 # FASTQ quality checks
+  - bioconda::trimmomatic=0.39 # adapter trimming

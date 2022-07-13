@@ -1,0 +1,28 @@
+name: mhc2_genotyping_kourami
+channels:
+  - conda-forge
+  - anaconda
+  - bioconda
+  - defaults
+dependencies:
+  - bamutil=1.0.14
+  - bwa=0.7.17
+  - bwakit=0.7.12
+  - bzip2=1.0.8
+  - ca-certificates=2020.10.14
+  - htslib=1.11
+  - krb5=1.18.2
+  - libcurl=7.71.1
+  - libdeflate=1.6
+  - libedit=3.1.20191231
+  - libgcc-ng=9.1.0
+  - libssh2=1.9.0
+  - libstdcxx-ng=9.1.0
+  - maven=3.6.0
+  - ncurses=6.2
+  - openjdk=8.0.152
+  - openssl=1.1.1h
+  - perl=5.26.2
+  - samtools=1.11
+  - xz=5.2.5
+  - zlib=1.2.11

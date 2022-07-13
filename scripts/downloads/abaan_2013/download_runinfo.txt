@@ -1,0 +1,8 @@
+Instructions to download RunInfo metadata:
+https://www.ncbi.nlm.nih.gov/sra/docs/sradownload/#download-metadata-associated-wit
+-> Go to https://www.ncbi.nlm.nih.gov/sra?linkname=bioproject_sra_all&from_uid=474665
+-> Click "Send to"
+-> File
+-> Format: RunInfo
+
+=> Store at downloads/pub/abaan_2013/run_info.csv
